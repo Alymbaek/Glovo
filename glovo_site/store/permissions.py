@@ -41,8 +41,8 @@ class Couriercheck(permissions.BasePermission):
         return False
 
 class CourierOwn(permissions.BasePermission):
-    def has_object_permission(self, request, view, obj):
-        if request.user == obj.courier.user_courier:
+    def has_permission(self, request, view):
+        if request.user == 'courier':
             return True
         return False
 

@@ -104,7 +104,7 @@ class ReviewStoreRetrieveDestroyAPIView(generics.RetrieveDestroyAPIView):
 class ReviewCourierListApiView(generics.ListCreateAPIView):
     queryset = ReviewCourier.objects.all()
     serializer_class = ReviewCourierSerializer
-    permission_classes = [permissions.IsAuthenticated, CheckReview, CourierOwn]
+    permission_classes = [permissions.IsAuthenticated, CheckReview]
 
 
 
@@ -113,11 +113,12 @@ class ReviewCourierListApiView(generics.ListCreateAPIView):
 class ReviewCourierRetrieveDestroyAPIView(generics.RetrieveDestroyAPIView):
     queryset = ReviewCourier.objects.all()
     serializer_class = ReviewCourierSerializer
-    permission_classes = [permissions.IsAuthenticated, CheckReview, CourierOwn]
+    permission_classes = [permissions.IsAuthenticated, CheckReview]
+
 
 class CourierListCreateAPIView(generics.ListCreateAPIView):
     serializer_class = CourierSerializer
-    permission_classes = [permissions.IsAuthenticated, Couriercheck]
+    permission_classes = [permissions.IsAuthenticated, Couriercheck, CourierOwn]
 
     def get_queryset(self):
         return Courier.objects.filter(user_courier=self.request.user)
@@ -128,7 +129,7 @@ class CourierListCreateAPIView(generics.ListCreateAPIView):
 class CourierRetrieveUpdateAPIView(generics.RetrieveUpdateAPIView):
     queryset = Courier.objects.all()
     serializer_class = CourierSerializer
-    permission_classes = [permissions.IsAuthenticated, Couriercheck]
+    permission_classes = [permissions.IsAuthenticated, Couriercheck, CourierOwn]
 
     def get_queryset(self):
         return Courier.objects.filter(user_courier=self.request.user)

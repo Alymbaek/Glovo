@@ -1,16 +1,18 @@
-from rest_framework import viewsets, generics, permissions,status
+from rest_framework import viewsets, generics, permissions, status
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.views import APIView
+
+
 from .models import *
 from .serializers import *
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter
-from .permissions import CheckCourier, CheckReview, CheckOwner,CheckOrder, StoreOwner,Couriercheck,CourierOwn
+from .permissions import CheckCourier, CheckReview, CheckOwner, CheckOrder, StoreOwner, CourierOwn,CheckUserCrud,Couriercheck,CourierOwner
 from .filters import StoreFilter
 
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken
-
-
 
 
 class RegisterView(generics.CreateAPIView):
@@ -47,22 +49,55 @@ class LogoutView(generics.GenericAPIView):
         except Exception:
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
-class UserProfileListAPIView(generics.ListAPIView):
+class UserProfileAPIView(APIView):
     queryset = UserProfile.objects.all()
-    serializer_class = UserProfileListSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    serializer_class = UserProfileSerializer
+    permission_classes = [permissions.IsAuthenticated, CheckUserCrud]
 
-class UserProfileRetrieveUpdateAPIView(generics.RetrieveUpdateAPIView):
+    def get(self, request):
+        user = request.user
+        serializer = UserProfileSerializer(user)
+        return Response(serializer.data)
+
+    def put(self, request):
+        user = request.user
+        serializer = UserProfileSerializer(user, data=request.data,
+                                          partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=400)
+
+
+
+
+
+
+class UsersProfileListAPIView(generics.ListAPIView):
     queryset = UserProfile.objects.all()
-    serializer_class = UserProfileDetailSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = UsersProfileListSerializer
+    permission_classes = [permissions.IsAuthenticated, CheckUserCrud]
+
+
+class UsersProfileRetrieveUpdateAPIView(generics.RetrieveUpdateAPIView):
+    queryset = UserProfile.objects.all()
+    serializer_class = UsersProfileDetailSerializer
+    permission_classes = [permissions.IsAuthenticated, CheckUserCrud]
+
+
+class StorePagination(PageNumberPagination):
+    page_size = 2
+    page_size_query_param = 'page_size'
+    max_page_size = 100
 
 
 class StoreListViewSet(viewsets.ModelViewSet):
     queryset = Store.objects.all()
     serializer_class = StoreListSerializer
+    pagination_class = StorePagination
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+    search_fields = ['store_name']
     permission_classes = [permissions.IsAuthenticated, CheckCourier, CheckOwner, StoreOwner]
-
 
 
 class StoreDetailViewSet(viewsets.ModelViewSet):
@@ -70,15 +105,13 @@ class StoreDetailViewSet(viewsets.ModelViewSet):
     serializer_class = StoreDetailSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_class = StoreFilter
-    permission_classes = [permissions.IsAuthenticated, CheckCourier, CheckOwner, StoreOwner]
-
+    pagination_class = StorePagination
 
 
 class OrderListAPIViewt(generics.ListAPIView):
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
     permission_classes = [permissions.IsAuthenticated, CheckOrder]
-
 
 
 
@@ -94,7 +127,6 @@ class ReviewStoreListApiView(generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticated, CheckReview]
 
 
-
 class ReviewStoreRetrieveDestroyAPIView(generics.RetrieveDestroyAPIView):
     queryset = ReviewStore.objects.all()
     serializer_class = ReviewStoreSerializer
@@ -107,9 +139,6 @@ class ReviewCourierListApiView(generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticated, CheckReview]
 
 
-
-
-
 class ReviewCourierRetrieveDestroyAPIView(generics.RetrieveDestroyAPIView):
     queryset = ReviewCourier.objects.all()
     serializer_class = ReviewCourierSerializer
@@ -118,21 +147,21 @@ class ReviewCourierRetrieveDestroyAPIView(generics.RetrieveDestroyAPIView):
 
 class CourierListCreateAPIView(generics.ListCreateAPIView):
     serializer_class = CourierSerializer
-    permission_classes = [permissions.IsAuthenticated, Couriercheck, CourierOwn]
+    permission_classes = [permissions.IsAuthenticated, CourierOwn]
 
     def get_queryset(self):
         return Courier.objects.filter(user_courier=self.request.user)
-
-
 
 
 class CourierRetrieveUpdateAPIView(generics.RetrieveUpdateAPIView):
     queryset = Courier.objects.all()
     serializer_class = CourierSerializer
-    permission_classes = [permissions.IsAuthenticated, Couriercheck, CourierOwn]
+    permission_classes = [permissions.IsAuthenticated, CourierOwn]
 
     def get_queryset(self):
         return Courier.objects.filter(user_courier=self.request.user)
+
+
 
 
 
@@ -158,6 +187,3 @@ class CartItemViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         cart, created = Cart.objects.get_or_create(user=self.request.user)
         serializer.save(cart=cart)
-
-
-

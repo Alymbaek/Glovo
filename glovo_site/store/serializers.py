@@ -36,16 +36,23 @@ class LoginSerializer(serializers.Serializer):
             'access': str(refresh.access_token),
             'refresh': str(refresh),
         }
-class UserProfileListSerializer(serializers.ModelSerializer):
+
+
+class UsersProfileListSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserProfile
-        fields = ['username', 'role']
+        fields = ['id', 'username', 'role']
 
-class UserProfileDetailSerializer(serializers.ModelSerializer):
+
+class UsersProfileDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserProfile
-        fields = ['id','username', 'first_name', 'last_name', 'role']
+        fields = ['id', 'username', 'first_name', 'last_name', 'role']
 
+class UserProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserProfile
+        fields = ['id', 'username', 'first_name', 'last_name', 'role']
 
 class StoreListSerializer(serializers.ModelSerializer):
     average_rating = serializers.SerializerMethodField()
@@ -59,116 +66,129 @@ class StoreListSerializer(serializers.ModelSerializer):
 
 
 class ProductListSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = Product
-        fields = ['id', 'image_product', 'product_name', 'description', 'price', 'quantity']
-
-class StoreDetailSerializer(serializers.ModelSerializer):
-    owner = UserProfileListSerializer()
-    product = ProductListSerializer(read_only=True, many=True)
-    average_rating = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Store
-        fields = ['id', 'image_store', 'store_name', 'average_rating', 'product',
-                  'address', 'owner', 'description', 'contact_info']
-
-    def get_average_rating(self, obj):
-        return obj.get_average_rating()
-
+        fields = ['id', 'image_product', 'product_name', 'description', 'price']
 
 
 
 class ReviewStoreSerializer(serializers.ModelSerializer):
-    store_client = UserProfileListSerializer()
+    store_client = UsersProfileListSerializer()
     store = StoreListSerializer()
+
     class Meta:
         model = ReviewStore
-        fields = ['id', 'store_client', 'store', 'rating', 'comment']
+        fields = ['id', 'store_client', 'store', 'rating_store', 'comment_store']
+
+
+class StoreDetailSerializer(serializers.ModelSerializer):
+    owner = UsersProfileListSerializer()
+    product = ProductListSerializer(read_only=True, many=True)
+    average_rating = serializers.SerializerMethodField()
+    ratings = ReviewStoreSerializer(read_only=True, many=True)
+    total_ratings = serializers.SerializerMethodField()
+    total_percent = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Store
+        fields = ['id', 'image_store', 'store_name', 'average_rating', 'total_ratings', 'total_percent', 'product',
+                  'address', 'owner', 'description', 'contact_info', 'ratings']
+
+    def get_average_rating(self, obj):
+        return obj.get_average_rating()
+
+    def get_total_ratings(self, obj):
+        return obj.get_total_ratings()
+
+    def get_total_percent(self, obj):
+        return obj.get_total_percent()
+
+
+
 
 class CourierSimpleSerializer(serializers.ModelSerializer):
-    user_courier = UserProfileListSerializer()
+    user_courier = UsersProfileListSerializer()
+
     class Meta:
         model = Courier
         fields = ['user_courier', 'status']
 
+
 class ReviewCourierSerializer(serializers.ModelSerializer):
-    client = UserProfileListSerializer()
-    courier = CourierSimpleSerializer()
+    client = UsersProfileListSerializer()
 
     class Meta:
         model = ReviewCourier
-        fields = ['id', 'client', 'courier', 'rating', 'comments']
+        fields = ['id', 'client', 'courier', 'comment_courier']
+
+
+
+
+
+class CartItemSimpleSerializer(serializers.ModelSerializer):
+    product = ProductListSerializer()
+
+    class Meta:
+        model = CartItem
+        fields = ['product']
+
 
 class OrderSerializer(serializers.ModelSerializer):
-    client = UserProfileListSerializer()
-    products = ProductListSerializer()
     courier_current = CourierSimpleSerializer(read_only=True, many=True)
+    cart_item = CartItemSimpleSerializer()
 
     class Meta:
         model = Order
-        fields = ['id', 'client', 'products', 'delivery_address',
+        fields = ['id', 'cart_item', 'delivery_address',
                   'courier_current', 'created_at']
+
+
+class OrderSimpleSerializer(serializers.ModelSerializer):
+    client = UsersProfileListSerializer()
+
+    class Meta:
+        model = Order
+        fields = ['id', 'client', 'delivery_address']
 
 
 class CourierSerializer(serializers.ModelSerializer):
     current_orders = OrderSerializer()
     average_rating = serializers.SerializerMethodField()
-    user_courier = UserProfileListSerializer()
+    user_courier = UsersProfileListSerializer()
+    rating = ReviewCourierSerializer(read_only=True, many=True)
+    total_courier_ratings = serializers.SerializerMethodField()
+
     class Meta:
         model = Courier
-        fields = ['id','average_rating', 'user_courier', 'current_orders', 'status']
+        fields = ['id', 'average_rating', 'user_courier', 'current_orders', 'rating', 'total_courier_ratings', 'status']
 
     def get_average_rating(self, obj):
         return obj.get_average_rating()
 
+    def get_total_courier_ratings(self, obj):
+        return obj.get_total_courier_ratings()
+
+
+
+
 
 class CartItemSerializer(serializers.ModelSerializer):
-    product = ProductListSerializer(read_only=True)
-    product_id = serializers.PrimaryKeyRelatedField(queryset=Product.objects.all(), write_only=True, source='product')
+    product = ProductListSerializer()
+    orders = OrderSerializer(read_only=True, many=True)
 
     class Meta:
         model = CartItem
-        fields = ['id', 'product', 'product_id', 'get_total_price']
-
-
-
+        fields = ['product', 'orders', 'get_total_price', 'quantity']
 
 
 class CartSerializer(serializers.ModelSerializer):
     items = CartItemSerializer(read_only=True, many=True)
     total_price = serializers.SerializerMethodField()
+    user = UsersProfileListSerializer()
 
     class Meta:
         model = Cart
-        fields = ['id', 'user', 'items', 'total_price']
+        fields = ['user', 'items', 'total_price']
 
     def get_total_price(self, obj):
         return obj.get_total_price()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
